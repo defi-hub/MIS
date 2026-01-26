@@ -4,6 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Paper](https://img.shields.io/badge/paper-preprint-yellow)](paper/mis_paper.pdf)
+[![Language](https://img.shields.io/badge/language-Rust%20%7C%20C-red)]()
 
 ---
 
