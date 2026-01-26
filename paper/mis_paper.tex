@@ -291,9 +291,10 @@ Given $L_{\text{exec}}$ and namespace state $S_0$, the execution trace is reprod
 \end{theorem}
 
 \section{Implementation}
+\label{sec:implementation}
 
-We provide a reference implementation demonstrating the core MIS 
-architecture~\cite{mis2026github}. The implementation consists of:
+We provide a reference implementation at 
+\url{https://github.com/defi-hub/MIS}~\cite{mis2026github}. The implementation consists of:
 
 \begin{itemize}
     \item eBPF LSM module (mis\_lsm.c): 200 lines of C
@@ -301,13 +302,9 @@ architecture~\cite{mis2026github}. The implementation consists of:
     \item Configuration (mis\_config.toml): Production-ready defaults
 \end{itemize}
 
-\textbf{Status}: This is a proof-of-concept implementation demonstrating 
-the architectural principles described in this paper. Production deployment 
-would require additional engineering (comprehensive testing, integration 
-with existing infrastructure, performance tuning).
+\textbf{Status}: This is a proof-of-concept implementation demonstrating the architectural principles described in this paper. Production deployment would require additional engineering (comprehensive testing, integration with existing infrastructure, performance tuning).
 
-The code is available under MIT license at: 
-\url{https://github.com/defi-hub/MIS}
+The code is available under MIT license at: \url{https://github.com/defi-hub/MIS}
 
 \section{Evaluation}
 \label{sec:evaluation}
