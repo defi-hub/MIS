@@ -56,10 +56,8 @@ This is a **conceptual implementation** demonstrating the core architecture. It 
 reference_implementation/
 ├── ebpf/
 │   └── mis_lsm.c          # eBPF LSM hooks (inode-based access control)
-│
 ├── policy_engine/
 │   └── main.rs            # Rust userspace policy engine
-│
 └── config/
     └── mis_config.toml    # Example configuration
 ```
