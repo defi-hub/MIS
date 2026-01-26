@@ -52,15 +52,13 @@ Key components:
 **Status**: Proof of Concept (PoC)
 
 This is a **conceptual implementation** demonstrating the core architecture. It is **not production-ready** and requires further development for deployment.
-```
-reference_implementation/
-├── ebpf/
-│   └── mis_lsm.c          # eBPF LSM hooks (inode-based access control)
-├── policy_engine/
-│   └── main.rs            # Rust userspace policy engine
-└── config/
-    └── mis_config.toml    # Example configuration
-```
+- reference_implementation/
+  - ebpf/
+    - mis_lsm.c  # eBPF LSM hooks
+  - policy_engine/
+    - main.rs  # Rust userspace policy engine
+  - config/
+    - mis_config.toml  # Example configuration
 
 **Components**:
 
