@@ -35,6 +35,18 @@ This repository contains the **reference implementation** and **academic paper**
 
 Full paper with formal proofs, evaluation, and related work.
 
+## Architecture
+
+For detailed architecture diagrams and attack mitigation examples, see:
+
+**[📐 Architecture Documentation](docs/architecture.md)**
+
+Key components:
+- Syscall flow: Agent → Kernel → eBPF LSM → Policy Engine
+- Trust boundaries: Trusted (kernel, policy) vs Untrusted (agent)
+- Attack scenarios with mitigations (TOCTOU, namespace escape, resource exhaustion)
+```
+
 ### Reference Implementation
 
 **Status**: Proof of Concept (PoC)
