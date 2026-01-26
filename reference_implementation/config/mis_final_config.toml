@@ -1,0 +1,361 @@
+# MIS Final Configuration
+# Production-ready settings with all security enhancements
+
+[system]
+name = "MIS Production Instance"
+version = "1.0.0"
+architecture = "fail-secure"
+threat_model = "agent-as-hostile"
+
+# ============================================================================
+# EDGE CONFIGURATION
+# ============================================================================
+
+[edge]
+namespace_runtime = "systemd-nspawn"
+isolation_level = "maximum"
+
+[edge.resources]
+cpu_quota = "80%"              # Max 80% of one core
+memory_max = "2G"              # Hard limit
+memory_high = "1.8G"           # Soft limit (trigger reclaim)
+io_weight = 100                # Default I/O priority
+
+[edge.capabilities]
+# All dropped except essential
+allowed = []
+dropped = [
+    "CAP_SYS_ADMIN",
+    "CAP_NET_ADMIN", 
+    "CAP_SYS_MODULE",
+    "CAP_SYS_BOOT",
+    "CAP_SYS_CHROOT",
+    "CAP_SYS_PTRACE",
+    "CAP_SYS_RAWIO"
+]
+
+[edge.network]
+mode = "private"               # --private-network by default
+allow_outbound = false         # No external communication
+whitelist_domains = []         # Empty by default
+
+[edge.mounts]
+workspace = "/var/agent/workspace"
+logs = "/var/log/agent"
+models = "/opt/models"
+
+[[edge.mounts.binds]]
+source = "/usr/lib/agent"
+target = "/usr/lib/agent"
+readonly = true
+
+[[edge.mounts.binds]]
+source = "/opt/models"
+target = "/models"
+readonly = true
+
+# ============================================================================
+# SECURITY LAYER
+# ============================================================================
+
+[security]
+default_policy = "deny"        # Fail-secure
+cache_unknown = false          # Don't cache unknown decisions
+audit_all = true              # Log every security decision
+
+[security.syscall_ttl]
+# Never cache (TTL = 0)
+ptrace = 0
+process_vm_readv = 0
+process_vm_writev = 0
+mount = 0
+umount = 0
+umount2 = 0
+pivot_root = 0
+chroot = 0
+
+# Short TTL (60 sec)
+read = 60
+write = 60
+close = 60
+fstat = 60
+lseek = 60
+
+# Medium TTL (180 sec)
+open = 180
+openat = 180
+creat = 180
+
+# Long TTL (300 sec)
+execve = 300
+execveat = 300
+
+[security.bloom_filters]
+base_bloom_path = "/etc/agent/base.bloom"
+base_bloom_size_mb = 2
+base_bloom_fp_rate = 0.01
+
+hotfix_bloom_path = "/etc/agent/hotfix.bloom"
+hotfix_bloom_size_mb = 0.5
+hotfix_bloom_fp_rate = 0.001
+
+# CRITICAL RULE: Hotfix HIT = DENY, даже при Exact MISS
+hotfix_priority = "absolute"
+
+[security.exact_db]
+path = "/etc/agent/critical.db"
+format = "sqlite"
+index_by = "inode"
+max_size_mb = 10
+
+[security.whitelist]
+path = "/etc/agent/whitelist.toml"
+version_control = "git"
+repo = "/etc/agent/whitelist.git"
+require_review = true          # Peer review for changes
+audit_trail = true
+
+# ============================================================================
+# WATCHDOG
+# ============================================================================
+
+[watchdog]
+enabled = true
+check_interval_sec = 5
+
+[watchdog.thresholds]
+cpu_percent = 100.0            # 100% of one core
+cpu_duration_sec = 30          # Sustained for 30 seconds
+memory_mb = 2048              # 2 GB
+
+[watchdog.actions]
+on_cpu_violation = "killswitch"
+on_memory_violation = "killswitch"
+on_cgroup_violation = "killswitch"
+
+[watchdog.killswitch]
+signal = "SIGKILL"             # No graceful shutdown
+cleanup = true                 # Remove namespace artifacts
+respawn_delay_sec = 5
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+[logging]
+level = "info"
+output = "structured"          # JSON format
+
+[logging.streams]
+execution = true               # syscalls, inode changes
+reasoning = true               # LLM chain-of-thought
+outcome = true                 # success/failure
+
+[logging.destinations]
+execution_stream = "kafka://central:9092/execution"
+reasoning_stream = "kafka://central:9092/reasoning"
+outcome_stream = "kafka://central:9092/outcome"
+
+[logging.sanitization]
+enabled = true
+remove_pii = true              # Regex + NER
+patterns = [
+    "email",
+    "phone",
+    "ssn",
+    "credit_card",
+    "ip_address"
+]
+
+# ============================================================================
+# POLICY SYNC
+# ============================================================================
+
+[policy_sync]
+mode = "hybrid"                # Pull + Push
+
+[policy_sync.pull]
+enabled = true
+interval_min = 15              # Every 15 minutes
+endpoint = "https://central/api/v1/policy"
+targets = ["base_bloom", "whitelist"]
+
+[policy_sync.push]
+enabled = true
+protocol = "mqtt"
+broker = "mqtt://central:1883"
+qos = 2                        # Exactly once delivery
+topics = ["critical/cve"]
+filter = "cvss >= 9.0"         # Only CRITICAL
+
+[policy_sync.emergency]
+latency_target_sec = 30        # < 30 sec from CVE to Edge
+retry_attempts = 5
+retry_backoff_ms = [100, 200, 500, 1000, 2000]
+
+# ============================================================================
+# CENTRAL CONNECTION
+# ============================================================================
+
+[central]
+api_endpoint = "https://central.mis.local/api/v1"
+auth_method = "mtls"
+cert_path = "/etc/agent/client.crt"
+key_path = "/etc/agent/client.key"
+ca_path = "/etc/agent/ca.crt"
+
+[central.heartbeat]
+enabled = true
+interval_sec = 60
+timeout_sec = 10
+
+[central.model_updates]
+registry = "registry.mis.local"
+verify_signatures = true       # cosign verification
+scan_before_load = true        # YARA rules
+auto_update = false            # Manual approval required
+
+# ============================================================================
+# TRAINING PIPELINE (EDGE SIDE)
+# ============================================================================
+
+[training]
+participate = true             # Send logs to Central
+local_training = false         # No local fine-tuning
+
+[training.data_collection]
+sample_rate = 1.0              # 100% of events
+buffer_size = 1000             # Events before flush
+flush_interval_sec = 60
+
+[training.privacy]
+differential_privacy = true
+epsilon = 1.0                  # DP parameter
+delta = 1e-5
+
+# ============================================================================
+# EBPF PROGRAMS
+# ============================================================================
+
+[ebpf]
+programs_path = "/etc/agent/ebpf"
+auto_load = true
+verify_strict = true
+
+[[ebpf.programs]]
+name = "mis_lsm"
+path = "/etc/agent/ebpf/mis_lsm.o"
+type = "lsm"
+attach_points = ["file_open", "task_kill"]
+
+[[ebpf.programs]]
+name = "ptrace_monitor"
+path = "/etc/agent/ebpf/ptrace_monitor.o"
+type = "tracepoint"
+attach_points = ["syscalls/sys_enter_ptrace"]
+
+[[ebpf.programs]]
+name = "process_vm_monitor"
+path = "/etc/agent/ebpf/process_vm_monitor.o"
+type = "tracepoint"
+attach_points = ["syscalls/sys_enter_process_vm_readv"]
+
+[ebpf.maps]
+inode_cache_size = 100000      # Per-CPU LRU
+ringbuf_size_kb = 256          # For event signaling
+stats_counters = 4             # cache_hit, cache_miss, denied, traced
+
+# ============================================================================
+# PERFORMANCE TUNING
+# ============================================================================
+
+[performance]
+# eBPF cache optimization
+percpu_cache = true            # Per-CPU LRU for scalability
+prefetch_inodes = true         # Prefetch frequently accessed inodes
+
+# Bloom filter optimization
+bloom_type = "classic"         # Classic, not Counting (4x memory savings)
+bloom_hash_function = "jhash"  # Kernel built-in
+
+# Syscall filtering
+fast_path_syscalls = [         # Skip userspace for these
+    "read", "write", "fstat", "lseek", "close"
+]
+
+# ============================================================================
+# MONITORING & OBSERVABILITY
+# ============================================================================
+
+[monitoring]
+enabled = true
+metrics_port = 9090            # Prometheus exporter
+health_endpoint = "/health"
+
+[monitoring.metrics]
+cache_hit_rate = true
+bloom_fp_rate = true
+decision_latency = true
+killswitch_triggers = true
+policy_sync_lag = true
+
+[monitoring.alerts]
+cpu_threshold_breach = "critical"
+memory_threshold_breach = "critical"
+bloom_fp_rate_high = "warning"
+policy_sync_failure = "critical"
+
+# ============================================================================
+# DEVELOPMENT & DEBUG
+# ============================================================================
+
+[debug]
+enabled = false                # MUST be false in production
+verbose_logging = false
+dump_core_on_crash = false
+allow_ptrace = false           # Never allow in production
+
+# ============================================================================
+# COMPLIANCE
+# ============================================================================
+
+[compliance]
+standards = ["NIST-SP-800-190", "CIS-Linux", "OWASP-LLM-Top10"]
+audit_retention_days = 365
+immutable_logs = true
+gdpr_compliant = true
+
+[compliance.audit]
+log_all_denies = true
+log_all_whitelist_changes = true
+log_all_model_updates = true
+export_format = "cef"          # Common Event Format
+
+# ============================================================================
+# DISASTER RECOVERY
+# ============================================================================
+
+[disaster_recovery]
+auto_backup = true
+backup_interval_hours = 24
+backup_retention_days = 30
+
+[disaster_recovery.rollback]
+enabled = true
+snapshots_to_keep = 10
+rollback_on_failure = true
+rollback_threshold = "critical"
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+
+[features]
+embodied_learning = true       # Enable training cycle
+distributed_rag = true         # Federated RAG access
+multimodal_logging = false     # Video/LiDAR (future)
+quantum_resistant_crypto = false  # Post-quantum (future)
+
+# ============================================================================
+# END OF CONFIGURATION
+# ============================================================================
