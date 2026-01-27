@@ -1,6 +1,6 @@
 # Modular Intelligence Spaces (MIS)
 
-<a href="https://doi.org/10.5281/zenodo.18381504"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.18381504.svg" alt="DOI"></a>
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18381504.svg)](https://doi.org/10.5281/zenodo.18381504)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Paper](https://img.shields.io/badge/paper-preprint-yellow)](paper/mis_paper.pdf)
 [![Language](https://img.shields.io/badge/language-Rust%20%7C%20C-red)]()
