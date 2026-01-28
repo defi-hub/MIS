@@ -12,9 +12,28 @@
 
 This repository contains the **reference implementation** and **academic paper** for Modular Intelligence Spaces (MIS) - a novel architecture for deploying autonomous AI agents with kernel-level isolation guarantees.
 
+---
+
+## Extended Notes (Design Rationale)
+
+The academic paper focuses on the formal architecture and reference implementation.
+
+For additional system-level motivation, design philosophy, and concepts that were intentionally left outside the preprint scope, see:
+
+- **Companion Article (Telegraph)**:  
+  https://telegra.ph/MIS-Polnaya-arhitektura-chto-ostalos-za-kadrom-akademicheskoj-stati-01-27
+
+- **Telegram Channel (open research log)**:  
+  https://t.me/def.blog/21
+
+These materials provide extended discussion on MIS as an execution-and-selection environment for autonomous agents beyond the strictly academic framing.
+
+---
+
 **Paper**: [Modular Intelligence Spaces: An eBPF-Based Secure Execution Environment for Autonomous AI Agents](paper/mis_paper.pdf)
 
 **Author**: Sergey Defis (xoomi16@gmail.com)
+(Telegram Direct @def.blog)
 
 ---
 
