@@ -231,6 +231,13 @@ grpcurl -plaintext localhost:50051 \
 
 ---
 
+## Features
+
+Runtime Guardrails: Prevents RCE, data exfiltration, and unauthorized network access at the kernel level (eBPF LSM).
+Namespace & Mount Protection: Hardened checks against container escape attempts.
+Behavioral Auditing: Full trace logs of agent activity, including "intent" analysis via syscall patterns.
+Python/AI Compatibility: Non-blocking "Trace Mode" allows noisy Python/PyTorch processes to run while being monitored.
+
 ## Citation
 
 ```bibtex
