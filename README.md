@@ -4,19 +4,18 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.0.0-green)](CHANGELOG.md)
 
-**Major v2.0 Release** - Enhanced architecture with DEFCON system, gRPC API, and async kill capabilities.
+## 🚀 v2.0 Major Release: The "Agentic" Update
 
----
+**MIS v2.0** transforms from a static security module into a dynamic **AI Alignment & Safety Layer**. This release introduces adaptive response mechanisms designed specifically for Autonomous Agents and LLM-based infrastructure.
 
-## What's New in v2.0
+### Key Innovations in v2.0:
+*   **🛡️ DEFCON Threat System:** Instead of binary "Allow/Deny", MIS now implements a 5-level threat scale. As an agent violates policies, the system automatically escalates (Slowdown → Block → Kill).
+*   **🧠 Adaptive Throttling (RL Feedback):** Implements `decision_slowdown` to provide "physical" negative feedback to agents during Reinforcement Learning (RL) without crashing the process.
+*   **📦 Cgroup-Native Isolation:** Moved from unstable PID tracking to robust **Cgroup ID** tracking, making MIS fully compatible with Kubernetes and Dockerized AI clusters.
+*   **⚡ Zero-Overhead Performance:** Migrated from BPF Hash Maps to **Task Local Storage**, ensuring virtually zero latency impact on model inference.
+*   **🔌 gRPC Control Plane:** New API for dynamic policy updates and integration with orchestration systems.
 
-### 🚀 Key Improvements
-
-1. **BPF Task Storage** - Per-process reputation data with zero hash lookup overhead
-2. **DEFCON System** - 5-level threat escalation (NORMAL → WARNING → ELEVATED → CRITICAL → EMERGENCY)
-3. **Cgroup-based Tracking** - Container-stable identification instead of PIDs
-4. **gRPC Server (Tonic)** - Dynamic policy updates without restart
-5. **Async Kill Manager** - Automatic process termination on critical threats
+> **Note:** The conceptual paper in `/paper` describes the foundational architecture. The v2.0 code implementation significantly extends these concepts with production-grade features. Updated documentation is coming in v2.0.1.
 
 ### Architecture Changes
 
