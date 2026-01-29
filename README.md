@@ -157,4 +157,16 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
+```
+---
+
+## Other Languages / 其他语言 / 他の言語 / 다른 언어
+
+- [English](README.md) (you are here)
+- [简体中文 (Simplified Chinese)](README.zh-CN.md)
+- [日本語 (Japanese)](README.ja.md)
+- [한국어 (Korean)](README.ko.md)
+
+```
+
 **Disclaimer**: This is academic research. The reference implementation demonstrates concepts from the paper but is not intended for production deployment without substantial additional engineering.
