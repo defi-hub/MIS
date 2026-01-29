@@ -28,6 +28,8 @@ PID → LRU Hash → Reputation    Cgroup ID → Task Storage → Reputation
                               Slowdown → Block → Kill
 ```
 
+"Architecture diagram (v1.0). v2.0 introduces DefconMonitor and KillManager components (updated diagram pending)."
+
 ---
 
 ## Quick Start
