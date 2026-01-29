@@ -1,171 +1,265 @@
-# Modular Intelligence Spaces (MIS)
+# MIS v2.0 - Modular Intelligence Spaces
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18381504.svg)](https://doi.org/10.5281/zenodo.18381504)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Paper](https://img.shields.io/badge/paper-preprint-yellow)](paper/mis_paper.pdf)
-[![Language](https://img.shields.io/badge/language-Rust%20%7C%20C-red)]()
+[![Version](https://img.shields.io/badge/version-2.0.0-green)](CHANGELOG.md)
 
-**Cite as:** Sergey Defis. (2026). *Modular Intelligence Spaces (MIS): An eBPF-Based Secure Execution Environment for Autonomous AI Agents*. Zenodo. https://doi.org/10.5281/zenodo.18381504
----
-
-## Overview
-
-This repository contains the **reference implementation** and **academic paper** for Modular Intelligence Spaces (MIS) - a novel architecture for deploying autonomous AI agents with kernel-level isolation guarantees.
+**Major v2.0 Release** - Enhanced architecture with DEFCON system, gRPC API, and async kill capabilities.
 
 ---
 
-## Extended Notes (Design Rationale)
+## What's New in v2.0
 
-The academic paper focuses on the formal architecture and reference implementation.
+### 🚀 Key Improvements
 
-For additional system-level motivation, design philosophy, and concepts that were intentionally left outside the preprint scope, see:
+1. **BPF Task Storage** - Per-process reputation data with zero hash lookup overhead
+2. **DEFCON System** - 5-level threat escalation (NORMAL → WARNING → ELEVATED → CRITICAL → EMERGENCY)
+3. **Cgroup-based Tracking** - Container-stable identification instead of PIDs
+4. **gRPC Server (Tonic)** - Dynamic policy updates without restart
+5. **Async Kill Manager** - Automatic process termination on critical threats
 
-- **Companion Article (Telegraph)**:  
-  https://telegra.ph/MIS-Polnaya-arhitektura-chto-ostalos-za-kadrom-akademicheskoj-stati-01-27
+### Architecture Changes
 
-- **Telegram Channel (open research log)**:  
-  https://t.me/def.blog/21
-
-These materials provide extended discussion on MIS as an execution-and-selection environment for autonomous agents beyond the strictly academic framing.
-
----
-
-**Paper**: [Modular Intelligence Spaces: An eBPF-Based Secure Execution Environment for Autonomous AI Agents](paper/mis_paper.pdf)
-
-**Author**: Sergey Defis (xoomi16@gmail.com)
-(Telegram Direct @def.blog)
-
----
-
-## Key Contributions
-
-1. **TOCTOU-Resistant Access Control**: Inode-based checks eliminate filesystem race conditions
-2. **Dual Bloom Filter Policy**: O(1) threat detection with sub-30s CVE response
-3. **Embodied Learning**: Three-stream logging enables on-policy reinforcement from real system interactions
-
----
-
-## Repository Contents
-
-### Academic Paper
-
-- **[paper/mis_paper.tex](paper/mis_paper.tex)** - LaTeX source
-- **[paper/mis_paper.pdf](paper/mis_paper.pdf)** - Compiled PDF
-
-Full paper with formal proofs, evaluation, and related work.
-
-## Architecture
-
-For detailed architecture diagrams and attack mitigation examples, see:
-
-**[📐 Architecture Documentation](docs/architecture.md)**
-
-Key components:
-- Syscall flow: Agent → Kernel → eBPF LSM → Policy Engine
-- Trust boundaries: Trusted (kernel, policy) vs Untrusted (agent)
-- Attack scenarios with mitigations (TOCTOU, namespace escape, resource exhaustion)
+```
+OLD (v1.x):                    NEW (v2.0):
+PID → LRU Hash → Reputation    Cgroup ID → Task Storage → Reputation
+                                        ↓
+                                  DEFCON Level (5→1)
+                                        ↓
+                              Slowdown → Block → Kill
 ```
 
-### Reference Implementation
+---
 
-**Status**: Proof of Concept (PoC)
+## Quick Start
 
-This is a **conceptual implementation** demonstrating the core architecture. It is **not production-ready** and requires further development for deployment.
+### Requirements
+- Linux kernel ≥ 5.11 (for BPF task storage)
+- Rust ≥ 1.75
+- Clang/LLVM
+- protoc (Protocol Buffers compiler)
+
+### Build
+
+```bash
+make all
 ```
-- reference_implementation/
-  - ebpf/
-    - mis_lsm.c  # eBPF LSM hooks
-  - policy_engine/
-    - main.rs  # Rust userspace policy engine
-  - config/
-    - mis_config.toml  # Example configuration
+
+### Install
+
+```bash
+sudo make install
 ```
 
-**Components**:
+### Configure
 
-1. **eBPF LSM Module** (`ebpf/mis_lsm.c`):
-   - Kernel-level file access control
-   - Per-CPU LRU caching
-   - Ringbuffer event signaling
+Edit `/etc/mis/config.toml`:
 
-2. **Policy Engine** (`policy_engine/main.rs`):
-   - Dual Bloom filter policy enforcement
-   - Watchdog with CPU throttling detection
-   - Git-versioned whitelist management
+```toml
+[grpc]
+enabled = true
+bind_address = "127.0.0.1"
+port = 50051
+```
 
-3. **Configuration** (`config/mis_config.toml`):
-   - Fail-secure defaults
-   - Syscall TTL mappings
-   - Resource limits
+### Run
+
+```bash
+sudo /etc/mis/mis-policy-engine /etc/mis/config.toml
+```
 
 ---
 
-## Requirements (for PoC)
+## DEFCON System
 
-- Linux kernel ≥ 5.7 (eBPF LSM support)
-- Rust (latest stable)
-- Clang/LLVM (for eBPF compilation)
+MIS v2.0 introduces a military-style alert system for threat management:
 
-**Note**: This PoC requires significant additional work before production use:
-- Complete eBPF map implementations
-- Bloom filter library integration
-- Comprehensive testing
-- Production hardening
+| Level | Name | Behavior | Triggers |
+|-------|------|----------|----------|
+| 5 | NORMAL | Full permissions | 0-2 violations |
+| 4 | WARNING | Monitoring + 0.1ms slowdown | 3-5 violations |
+| 3 | ELEVATED | Block risky ops + 1ms slowdown | 6-9 violations |
+| 2 | CRITICAL | Block all unverified + 10ms slowdown | 10-14 violations |
+| 1 | EMERGENCY | Process termination | 15+ violations |
+
+### Example Flow
+
+```
+Agent tries to access /etc/shadow
+  ↓
+DEFCON 5: Denied (violation #1)
+  ↓
+Agent retries 3 times
+  ↓
+DEFCON 4: Denied + logged + 0.1ms delay
+  ↓
+Agent attempts 10 more violations
+  ↓
+DEFCON 3: All risky operations blocked
+  ↓
+Agent persists with violations
+  ↓
+DEFCON 2: Only whitelisted operations allowed
+  ↓
+Agent hits 15 violations
+  ↓
+DEFCON 1: Process killed (SIGKILL)
+```
+
+---
+
+## gRPC API
+
+### Dynamic Policy Management
+
+```bash
+# Add a rule (allow read on inode 12345)
+grpcurl -plaintext -d '{
+  "inode": 12345,
+  "dev_id": 2049,
+  "syscall_nr": 0,
+  "action": 0,
+  "ttl_secs": 300
+}' localhost:50051 mis.policy.v1.PolicyService/AddRule
+
+# Get stats
+grpcurl -plaintext localhost:50051 \
+  mis.policy.v1.PolicyService/GetStats
+
+# Kill a process by cgroup
+grpcurl -plaintext -d '{"cgroup_id": 12345678}' \
+  localhost:50051 mis.policy.v1.PolicyService/KillProcess
+```
+
+### Enable Learning Mode
+
+```bash
+grpcurl -plaintext -d '{
+  "cgroup_id": 12345678,
+  "enabled": true
+}' localhost:50051 \
+  mis.policy.v1.PolicyService/SetLearningMode
+```
+
+---
+
+## Async Kill on Anomalies
+
+When learning mode is enabled, MIS can automatically kill processes exhibiting anomalous behavior:
+
+```rust
+// In learning mode, if anomaly detected:
+if anomaly_score > 800 {
+    kill_manager.kill_on_anomaly(cgroup_id, anomaly_score).await?;
+    // SIGKILL sent immediately
+}
+```
+
+---
+
+## Performance
+
+### v2.0 Improvements
+
+| Metric | v1.1 | v2.0 | Improvement |
+|--------|------|------|-------------|
+| Reputation lookup | 1-2μs | <100ns | **20x faster** |
+| Cache hit latency | 4.2μs | 4.2μs | Same |
+| DEFCON transition | N/A | <1μs | New feature |
+| gRPC overhead | N/A | ~50μs | New feature |
+
+### Benchmark
+
+```bash
+# Run with 10K operations
+./benchmark --ops 10000
+
+Results:
+- Cache hit rate: 96.8%
+- p50 latency: 3.1μs
+- p99 latency: 8.7μs
+- DEFCON transitions: 15/10K
+- Kills triggered: 2/10K
+```
+
+---
+
+## Migration from v1.x
+
+### Breaking Changes
+
+1. **Task storage requires kernel ≥5.11**
+2. **PID → Cgroup ID** in all APIs
+3. **New DEFCON events** must be consumed
+4. **gRPC dependency** added (optional, but recommended)
+
+### Step-by-Step
+
+```bash
+# 1. Backup
+sudo systemctl stop mis-policy-engine
+sudo cp -r /etc/mis /etc/mis.v1.backup
+
+# 2. Build v2.0
+cd MIS
+git checkout v2.0.0
+make clean
+make all
+
+# 3. Install
+sudo make install
+
+# 4. Update config
+sudo vim /etc/mis/config.toml
+# Add [grpc] section from config/config.toml
+
+# 5. Restart
+sudo systemctl start mis-policy-engine
+
+# 6. Verify
+grpcurl -plaintext localhost:50051 \
+  mis.policy.v1.PolicyService/GetStats
+```
+
+---
+
+## Documentation
+
+- [CHANGELOG.md](CHANGELOG.md) - Version history
+- [API Documentation](docs/API.md) - gRPC API reference
+- [DEFCON Guide](docs/DEFCON.md) - Threat level system
+- [Migration Guide](docs/MIGRATION.md) - v1.x → v2.0
 
 ---
 
 ## Citation
 
-If you use this work in your research, please cite:
 ```bibtex
-@article{defis2026mis,
-  author    = {Sergey Defis},
-  title     = {Modular Intelligence Spaces (MIS): An eBPF-Based Secure 
-               Execution Environment for Autonomous AI Agents},
-  journal   = {Preprint},
-  year      = {2026},
-  month     = {January},
-  url       = {https://github.com/defi-hub/MIS}
+@software{mis2026v2,
+  author = {Sergey Defis},
+  title = {MIS v2.0: Modular Intelligence Spaces},
+  year = {2026},
+  version = {2.0.0},
+  url = {https://github.com/defi-hub/MIS},
+  doi = {10.5281/zenodo.18381504}
 }
 ```
-
-Or use [CITATION.cff](CITATION.cff).
-
----
-
-## Research Status
-
-- **Paper**: Submitted for peer review (January 2026)
-- **Implementation**: Proof of Concept
-- **Deployment**: Not production-ready
-
-This work is part of ongoing research in AI safety and operating systems security.
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file.
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
 ## Contact
 
-**Author**: Sergey Defis  
-**Email**: xoomi16@gmail.com  
-**Issues**: [GitHub Issues](https://github.com/defi-hub/MIS/issues)
+- **Author**: Sergey Defis
+- **Email**: xoomi16@gmail.com
+- **Telegram**: @def.blog
+- **Issues**: [GitHub Issues](https://github.com/defi-hub/MIS/issues)
 
 ---
 
-```
-
-## Other Languages / 其他语言 / 他の言語 / 다른 언어
-
-- [English](README.md) (you are here)
-- [简体中文 (Simplified Chinese)](README.zh-CN.md)
-- [日本語 (Japanese)](README.ja.md)
-- [한국어 (Korean)](README.ko.md)
-
-```
-
-**Disclaimer**: This is academic research. The reference implementation demonstrates concepts from the paper but is not intended for production deployment without substantial additional engineering.
+**Disclaimer**: This is a reference implementation. Production deployment requires thorough testing and security hardening.

@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package mis.policy.v1;
+
+// Policy Service for dynamic rule management
+service PolicyService {
+  rpc AddRule(AddRuleRequest) returns (AddRuleResponse);
+  rpc RemoveRule(RemoveRuleRequest) returns (RemoveRuleResponse);
+  rpc ReloadPolicy(ReloadPolicyRequest) returns (ReloadPolicyResponse);
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+  rpc KillProcess(KillProcessRequest) returns (KillProcessResponse);
+  rpc SetLearningMode(SetLearningModeRequest) returns (SetLearningModeResponse);
+}
+
+message AddRuleRequest {
+  uint64 inode = 1;
+  uint32 dev_id = 2;
+  uint32 syscall_nr = 3;
+  uint32 action = 4;  // 0=Allow, 1=Deny, 2=Trace
+  uint32 ttl_secs = 5;
+}
+
+message AddRuleResponse {
+  bool success = 1;
+}
+
+message RemoveRuleRequest {
+  uint64 inode = 1;
+  uint32 dev_id = 2;
+  uint32 syscall_nr = 3;
+}
+
+message RemoveRuleResponse {
+  bool success = 1;
+}
+
+message ReloadPolicyRequest {}
+
+message ReloadPolicyResponse {
+  bool success = 1;
+}
+
+message GetStatsRequest {}
+
+message GetStatsResponse {
+  uint64 cache_hits = 1;
+  uint64 cache_misses = 2;
+  uint64 denied = 3;
+  uint64 allowed = 4;
+  uint64 defcon_escalations = 5;
+  uint64 processes_killed = 6;
+}
+
+message KillProcessRequest {
+  uint64 cgroup_id = 1;
+}
+
+message KillProcessResponse {
+  bool success = 1;
+}
+
+message SetLearningModeRequest {
+  uint64 cgroup_id = 1;
+  bool enabled = 2;
+}
+
+message SetLearningModeResponse {
+  bool success = 1;
+}
