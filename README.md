@@ -158,7 +158,6 @@ MIT License - see [LICENSE](LICENSE) file.
 ---
 
 ```
----
 
 ## Other Languages / 其他语言 / 他の言語 / 다른 언어
 
