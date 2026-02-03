@@ -91,7 +91,8 @@ v2.0: Security module          v2.1: Complete platform
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed design documentation.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design documentation.
+
 
 ---
 
