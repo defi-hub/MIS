@@ -1,6 +1,6 @@
 # MIS v2.1.0 - Modular Intelligence Spaces
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18381504.svg)](https://doi.org/10.5281/zenodo.18381504)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18474745.svg)](https://doi.org/10.5281/zenodo.18474745)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.1.0-green)](CHANGELOG.md)
 [![Kernel](https://img.shields.io/badge/kernel-%E2%89%A55.15-orange)](https://kernel.org)
@@ -482,7 +482,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## 📖 Citation
 
 If you use MIS in your research, please cite:
-
 ```bibtex
 @software{mis2026v21,
   author = {Sergey Defis},
@@ -490,7 +489,20 @@ If you use MIS in your research, please cite:
   year = {2026},
   version = {2.1.0},
   url = {https://github.com/defi-hub/MIS},
-  doi = {10.5281/zenodo.XXXXX}  # Update with new DOI
+  doi = {10.5281/zenodo.18474745}
+}
+```
+
+For the technical paper:
+```bibtex
+@techreport{defis2026mis,
+  author = {Sergey Defis},
+  title = {Modular Intelligence Spaces: Intent-Driven Security Architecture for AI Agents},
+  institution = {Independent Research},
+  year = {2026},
+  type = {Technical Report},
+  url = {https://github.com/defi-hub/MIS/paper},
+  doi = {10.5281/zenodo.18474745}
 }
 ```
 
