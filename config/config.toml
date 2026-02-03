@@ -1,0 +1,56 @@
+# MIS Policy Engine v2.0 Configuration
+
+[paths]
+hotfix_bloom = "/etc/mis/policy/hotfix.bloom"
+base_bloom = "/etc/mis/policy/base.bloom"
+exact_db = "/etc/mis/policy/critical.db"
+whitelist = "/etc/mis/policy/whitelist.toml"
+bpf_object = "/etc/mis/bpf/mis_lsm.o"
+audit_log = "/var/log/mis/audit.log"
+policy_state = "/var/lib/mis/state.json"
+
+[bloom]
+hotfix_capacity = 10000
+hotfix_fp_rate = 0.001
+base_capacity = 1000000
+base_fp_rate = 0.01
+auto_reload_interval_secs = 30
+
+[policy]
+default_action = "deny"
+cache_ttl_enabled = true
+hotfix_priority = true
+exact_match_required = true
+max_cache_entries = 100000
+unknown_action = "trace"
+
+[watchdog]
+enabled = true
+check_interval_secs = 5
+cpu_threshold_percent = 80.0
+memory_threshold_mb = 512
+kill_after_violations = 6
+grace_period_secs = 30
+
+[logging]
+level = "info"
+format = "json"
+file_output = true
+stdout_output = true
+max_file_size_mb = 100
+max_files = 10
+
+# NEW in v2.0: gRPC server for dynamic policy management
+[grpc]
+enabled = true
+bind_address = "127.0.0.1"
+port = 50051
+tls_enabled = false
+# tls_cert_path = "/etc/mis/certs/server.crt"
+# tls_key_path = "/etc/mis/certs/server.key"
+
+[metrics]
+enabled = true
+bind_address = "127.0.0.1"
+port = 9090
+endpoint = "/metrics"

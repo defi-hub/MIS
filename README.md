@@ -4,18 +4,19 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.0.0-green)](CHANGELOG.md)
 
-## 🚀 v2.0 Major Release: The "Agentic" Update
+**Major v2.0 Release** - Enhanced architecture with DEFCON system, gRPC API, and async kill capabilities.
 
-**MIS v2.0** transforms from a static security module into a dynamic **AI Alignment & Safety Layer**. This release introduces adaptive response mechanisms designed specifically for Autonomous Agents and LLM-based infrastructure.
+---
 
-### Key Innovations in v2.0:
-*   **🛡️ DEFCON Threat System:** Instead of binary "Allow/Deny", MIS now implements a 5-level threat scale. As an agent violates policies, the system automatically escalates (Slowdown → Block → Kill).
-*   **🧠 Adaptive Throttling (RL Feedback):** Implements `decision_slowdown` to provide "physical" negative feedback to agents during Reinforcement Learning (RL) without crashing the process.
-*   **📦 Cgroup-Native Isolation:** Moved from unstable PID tracking to robust **Cgroup ID** tracking, making MIS fully compatible with Kubernetes and Dockerized AI clusters.
-*   **⚡ Zero-Overhead Performance:** Migrated from BPF Hash Maps to **Task Local Storage**, ensuring virtually zero latency impact on model inference.
-*   **🔌 gRPC Control Plane:** New API for dynamic policy updates and integration with orchestration systems.
+## What's New in v2.0
 
-> **Note:** The conceptual paper in `/paper` describes the foundational architecture. The v2.0 code implementation significantly extends these concepts with production-grade features. Updated documentation is coming in v2.0.1.
+### 🚀 Key Improvements
+
+1. **BPF Task Storage** - Per-process reputation data with zero hash lookup overhead
+2. **DEFCON System** - 5-level threat escalation (NORMAL → WARNING → ELEVATED → CRITICAL → EMERGENCY)
+3. **Cgroup-based Tracking** - Container-stable identification instead of PIDs
+4. **gRPC Server (Tonic)** - Dynamic policy updates without restart
+5. **Async Kill Manager** - Automatic process termination on critical threats
 
 ### Architecture Changes
 
@@ -27,8 +28,6 @@ PID → LRU Hash → Reputation    Cgroup ID → Task Storage → Reputation
                                         ↓
                               Slowdown → Block → Kill
 ```
-
-"Architecture diagram (v1.0). v2.0 introduces DefconMonitor and KillManager components (updated diagram pending)."
 
 ---
 
@@ -232,13 +231,6 @@ grpcurl -plaintext localhost:50051 \
 - [Migration Guide](docs/MIGRATION.md) - v1.x → v2.0
 
 ---
-
-## Features
-
-Runtime Guardrails: Prevents RCE, data exfiltration, and unauthorized network access at the kernel level (eBPF LSM).
-Namespace & Mount Protection: Hardened checks against container escape attempts.
-Behavioral Auditing: Full trace logs of agent activity, including "intent" analysis via syscall patterns.
-Python/AI Compatibility: Non-blocking "Trace Mode" allows noisy Python/PyTorch processes to run while being monitored.
 
 ## Citation
 
