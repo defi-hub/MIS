@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package mis.orchestrator.v1;
+
+// Orchestration Service - Complete session lifecycle management
+service OrchestrationService {
+  // Session management
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc SuspendSession(SuspendSessionRequest) returns (SuspendSessionResponse);
+  rpc ResumeSession(ResumeSessionRequest) returns (ResumeSessionResponse);
+  rpc TerminateSession(TerminateSessionRequest) returns (TerminateSessionResponse);
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  
+  // Token management
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // Statistics
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+}
+
+// ============================================================================
+// Session Management
+// ============================================================================
+
+message CreateSessionRequest {
+  string intent_name = 1;      // "RESEARCH", "DEPLOY", etc.
+  uint32 agent_pid = 2;         // Process ID
+  uint64 cgroup_id = 3;         // Container cgroup ID
+  optional uint64 ttl_secs = 4; // Token TTL (default 3600)
+}
+
+message CreateSessionResponse {
+  uint64 session_id = 1;
+  uint64 capabilities = 2;      // Capability bitmask
+  uint64 expires_at = 3;        // Token expiration (ns)
+}
+
+message SuspendSessionRequest {
+  uint64 session_id = 1;
+}
+
+message SuspendSessionResponse {
+  bool success = 1;
+}
+
+message ResumeSessionRequest {
+  uint64 session_id = 1;
+}
+
+message ResumeSessionResponse {
+  bool success = 1;
+}
+
+message TerminateSessionRequest {
+  uint64 session_id = 1;
+}
+
+message TerminateSessionResponse {
+  bool success = 1;
+}
+
+message GetSessionRequest {
+  uint64 session_id = 1;
+}
+
+message GetSessionResponse {
+  uint64 session_id = 1;
+  uint32 agent_pid = 2;
+  string intent_name = 3;
+  uint64 capabilities = 4;
+  uint32 state = 5;             // 0=Active, 1=Suspended, 2=Terminated
+  uint32 violation_count = 6;
+  uint32 defcon_level = 7;
+}
+
+message ListSessionsRequest {}
+
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+}
+
+message SessionInfo {
+  uint64 session_id = 1;
+  uint32 agent_pid = 2;
+  string intent_name = 3;
+  uint32 state = 4;
+}
+
+// ============================================================================
+// Token Management
+// ============================================================================
+
+message RefreshTokenRequest {
+  uint64 session_id = 1;
+  optional uint64 ttl_secs = 2;
+}
+
+message RefreshTokenResponse {
+  bool success = 1;
+}
+
+// ============================================================================
+// Statistics
+// ============================================================================
+
+message GetStatsRequest {}
+
+message GetStatsResponse {
+  uint64 token_validated = 1;
+  uint64 token_expired = 2;
+  uint64 allowed = 3;
+  uint64 denied = 4;
+  uint64 total_decisions = 5;
+}

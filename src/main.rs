@@ -1,9 +1,11 @@
-// MIS Policy Engine v2.0 - Main entry point
-// New features:
-// - gRPC server (Tonic) for dynamic policy management
-// - Async Kill on anomaly detection in learning mode
-// - DEFCON event monitoring and response
-// - Cgroup-based process tracking
+// MIS Orchestrator v2.1.1 - Production implementation
+//
+// Architecture:
+// 1. TokenService: Ed25519 signing + SHA256 hashing
+// 2. BpfInterface: Kernel map operations
+// 3. IntentCompiler: YAML → capability bitmasks
+// 4. SessionManager: Lifecycle management
+// 5. GrpcServer: API endpoint
 
 use anyhow::{Context, Result};
 use std::path::Path;
@@ -13,28 +15,30 @@ use tokio::signal;
 use tracing::{info, warn, error};
 
 mod config;
-mod policy;
+mod token_service;
+mod bpf_ops;
+mod intent_compiler;
+mod session_manager;
 mod grpc_server;
-mod kill_manager;
-mod defcon_monitor;
-mod learning;
 
 use config::Config;
-use policy::PolicyEngine;
+use token_service::TokenService;
+use bpf_ops::BpfInterface;
+use session_manager::SessionManager;
 use grpc_server::GrpcServer;
-use kill_manager::KillManager;
-use defcon_monitor::DefconMonitor;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
-        .with_env_filter("info")
+        .with_env_filter(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string())
+        )
         .json()
         .init();
-
-    info!("MIS Policy Engine v2.0.0 starting...");
-
+    
+    info!("MIS Orchestrator v2.1.1 starting...");
+    
     // Load configuration
     let config_path = std::env::args()
         .nth(1)
@@ -44,96 +48,82 @@ async fn main() -> Result<()> {
         .context("Failed to load configuration")?;
     
     info!("Configuration loaded from {}", config_path);
-
-    // Initialize policy engine
-    let policy_engine = Arc::new(RwLock::new(
-        PolicyEngine::new(&config).await
-            .context("Failed to initialize policy engine")?
-    ));
-
-    info!("Policy engine initialized");
-
-    // Initialize Kill Manager (for DEFCON 1 and anomaly kills)
-    let kill_manager = Arc::new(
-        KillManager::new(policy_engine.clone())
-            .context("Failed to initialize kill manager")?
-    );
-
-    info!("Kill manager initialized");
-
-    // Initialize DEFCON Monitor
-    let defcon_monitor = Arc::new(RwLock::new(
-        DefconMonitor::new(policy_engine.clone(), kill_manager.clone())
-            .context("Failed to initialize DEFCON monitor")?
-    ));
-
-    info!("DEFCON monitor initialized");
-
-    // Start gRPC server if enabled
-    let grpc_handle = if config.grpc.enabled {
-        info!("Starting gRPC server on {}:{}", config.grpc.bind_address, config.grpc.port);
-        
-        let grpc_server = GrpcServer::new(
-            policy_engine.clone(),
-            kill_manager.clone(),
-            config.grpc.clone(),
-        );
-        
-        Some(tokio::spawn(async move {
-            if let Err(e) = grpc_server.serve().await {
-                error!("gRPC server error: {}", e);
+    
+    // Initialize TokenService
+    let token_service = if config.paths.bpf_object.exists() {
+        // Load existing key
+        match TokenService::from_key_file(&config.paths.bpf_object) {
+            Ok(svc) => {
+                info!("Loaded existing signing key");
+                Arc::new(svc)
             }
-        }))
+            Err(_) => {
+                warn!("Failed to load key, generating new one");
+                let svc = TokenService::new();
+                Arc::new(svc)
+            }
+        }
     } else {
-        info!("gRPC server disabled");
-        None
+        info!("Generating new signing key");
+        Arc::new(TokenService::new())
     };
-
-    // Start event processing loop
-    let engine_handle = {
-        let engine = policy_engine.clone();
-        tokio::spawn(async move {
-            if let Err(e) = engine.write().await.run_event_loop().await {
-                error!("Event loop error: {}", e);
-            }
-        })
-    };
-
-    // Start DEFCON monitor
-    let defcon_handle = {
-        let monitor = defcon_monitor.clone();
-        tokio::spawn(async move {
-            if let Err(e) = monitor.write().await.run().await {
-                error!("DEFCON monitor error: {}", e);
-            }
-        })
-    };
-
-    // Start kill manager worker
-    let kill_handle = {
-        let km = kill_manager.clone();
-        tokio::spawn(async move {
-            if let Err(e) = km.run_worker().await {
-                error!("Kill manager error: {}", e);
-            }
-        })
-    };
-
-    info!("All services started. Press Ctrl+C to shut down.");
-
+    
+    // Initialize BPF interface
+    let bpf = Arc::new(RwLock::new(
+        BpfInterface::new(&config.paths.bpf_object)
+            .context("Failed to load BPF object")?
+    ));
+    
+    info!("BPF enforcer loaded and attached");
+    
+    // Initialize SessionManager
+    let session_manager = Arc::new(
+        SessionManager::new(token_service.clone(), bpf.clone())
+    );
+    
+    info!("Session manager initialized");
+    
+    // Start gRPC server
+    let grpc_server = GrpcServer::new(
+        session_manager.clone(),
+        bpf.clone(),
+        config.grpc.clone(),
+    );
+    
+    info!(
+        "Starting gRPC server on {}:{}",
+        config.grpc.bind_address,
+        config.grpc.port
+    );
+    
+    let grpc_handle = tokio::spawn(async move {
+        if let Err(e) = grpc_server.serve().await {
+            error!("gRPC server error: {}", e);
+        }
+    });
+    
+    // Display startup info
+    info!("=== MIS Orchestrator Ready ===");
+    info!("gRPC API: {}:{}", config.grpc.bind_address, config.grpc.port);
+    info!("Built-in intents: RESEARCH, DEPLOY, TEST, ANALYZE");
+    info!("Press Ctrl+C to shut down");
+    
     // Wait for shutdown signal
     signal::ctrl_c().await.context("Failed to listen for Ctrl+C")?;
     info!("Shutdown signal received, cleaning up...");
-
-    // Graceful shutdown
-    engine_handle.abort();
-    defcon_handle.abort();
-    kill_handle.abort();
     
-    if let Some(h) = grpc_handle {
-        h.abort();
+    // Graceful shutdown
+    grpc_handle.abort();
+    
+    // Terminate all active sessions
+    info!("Terminating active sessions...");
+    let sessions = session_manager.list_sessions().await;
+    for session in sessions {
+        if let Err(e) = session_manager.terminate_session(session.session_id).await {
+            warn!("Failed to terminate session {}: {}", session.session_id, e);
+        }
     }
-
-    info!("MIS Policy Engine v2.0.0 stopped");
+    
+    info!("MIS Orchestrator v2.1.1 stopped");
     Ok(())
 }

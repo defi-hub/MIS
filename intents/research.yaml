@@ -1,0 +1,46 @@
+intent:
+  name: "RESEARCH"
+  description: "Academic research and data analysis"
+  version: "1.0.0"
+
+capabilities:
+  - CAP_READ
+  - CAP_NETWORK
+  - CAP_EXEC
+
+filesystem:
+  allow:
+    - /data/papers/*
+    - /data/datasets/*
+    - /tmp/analysis/*
+    - /home/*/research/*
+  deny:
+    - /etc/*
+    - /root/*
+    - /home/*/.ssh/*
+    - /home/*/.aws/*
+
+network:
+  allow:
+    - arxiv.org:443
+    - scholar.google.com:443
+    - semanticscholar.org:443
+    - pubmed.ncbi.nlm.nih.gov:443
+    - doi.org:443
+    - github.com:443
+  deny:
+    - "*:*"
+
+executables:
+  allow:
+    - /usr/bin/python3
+    - /usr/bin/pdftotext
+    - /usr/bin/pandoc
+    - /usr/bin/git
+    - /usr/bin/curl
+    - /usr/bin/wget
+
+quotas:
+  max_files_open: 1000
+  max_memory_mb: 8192
+  max_cpu_percent: 80

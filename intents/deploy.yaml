@@ -1,0 +1,46 @@
+intent:
+  name: "DEPLOY"
+  description: "Deploy applications to production infrastructure"
+  version: "1.0.0"
+
+capabilities:
+  - CAP_READ
+  - CAP_WRITE
+  - CAP_EXEC
+  - CAP_NETWORK
+  - CAP_ADMIN
+
+filesystem:
+  allow:
+    - /opt/app/*
+    - /var/log/app/*
+    - /etc/app/*
+    - /tmp/*
+  deny:
+    - /etc/passwd
+    - /etc/shadow
+    - /root/*
+    - /home/*/.ssh/*
+
+network:
+  allow:
+    - production-db.internal:5432
+    - api.example.com:443
+    - docker-registry.internal:5000
+    - k8s-api.internal:6443
+  deny:
+    - "*:22"
+    - "*:3389"
+
+executables:
+  allow:
+    - /usr/bin/docker
+    - /usr/bin/kubectl
+    - /usr/bin/systemctl
+    - /opt/app/deploy.sh
+    - /usr/bin/git
+
+quotas:
+  max_files_open: 10000
+  max_memory_mb: 16384
+  max_cpu_percent: 90
